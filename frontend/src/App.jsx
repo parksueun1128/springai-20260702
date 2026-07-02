@@ -1,121 +1,106 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [question, setQuestion] = useState('Spring AI를 한 문단으로 설명해 줘.')
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const submitQuestion = async (event) => {
+    event.preventDefault()
+
+    const trimmed = question.trim()
+
+    if (!trimmed || loading) return
+
+    setError('')
+    setLoading(true)
+    setMessages((current) => [...current, { role: 'user', text: trimmed }])
+    setQuestion('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: trimmed }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.message || `요청 실패: HTTP ${response.status}`)
+      }
+
+      setMessages((current) => [
+        ...current,
+        { role: 'assistant', text: data.answer || '응답 내용이 없습니다.' },
+      ])
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : '알 수 없는 오류가 발생했습니다.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <main className="page-shell">
+      <section className="chat-card">
+        <header>
+          <p className="eyebrow">SPRING AI STEP BY STEP</p>
+          <h1>Spring AI 튜터</h1>
+          <p className="subtitle">
+            React에서 Spring Boot REST API를 거쳐 OpenAI 모델을 호출합니다.
           </p>
+        </header>
+
+        <div className="message-list" aria-live="polite">
+          {messages.length === 0 && (
+            <div className="empty-state">
+              질문을 입력하고 첫 번째 AI 응답을 확인해 보세요.
+            </div>
+          )}
+
+          {messages.map((message, index) => (
+            <article
+              key={`${message.role}-${index}`}
+              className={`message ${message.role}`}
+            >
+              <strong>{message.role === 'user' ? '나' : 'AI'}</strong>
+              <p>{message.text}</p>
+            </article>
+          ))}
+
+          {loading && <div className="loading">답변을 작성하고 있습니다.</div>}
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+
+        {error && <p className="error-box">{error}</p>}
+
+        <form onSubmit={submitQuestion}>
+          <label htmlFor="question">질문</label>
+          <textarea
+            id="question"
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            maxLength={2000}
+            rows={4}
+            placeholder="Spring AI에 관해 질문해 보세요."
+          />
+
+          <div className="form-footer">
+            <span>{question.length}/2000</span>
+            <button type="submit" disabled={loading || !question.trim()}>
+              {loading ? '요청 중' : '질문 보내기'}
+            </button>
+          </div>
+        </form>
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
